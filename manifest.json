@@ -1,0 +1,11 @@
+{
+  "name":"MedLembrete",
+  "short_name":"MedLembrete",
+  "description":"Controle de medicamentos, horários, estoque e histórico.",
+  "start_url":"/",
+  "display":"standalone",
+  "background_color":"#f4f7fb",
+  "theme_color":"#172b79",
+  "lang":"pt-BR",
+  "icons":[{"src":"/icon.svg","sizes":"any","type":"image/svg+xml","purpose":"any maskable"}]
+}
