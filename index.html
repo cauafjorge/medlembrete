@@ -89,8 +89,8 @@
           </select>
         </label>
         <label class="full">Horários (separe por vírgula)
-          <input id="medTimes" required placeholder="08:00, 20:00" inputmode="numeric" />
-          <small>Use o formato HH:MM. Você pode informar vários horários.</small>
+          <input id="medTimes" type="text" required placeholder="08:00, 20:00" inputmode="text" autocomplete="off" autocapitalize="off" spellcheck="false" />
+          <small>Use o formato HH:MM. Ex.: 08:00, 20:00.</small>
         </label>
         <label>Estoque atual
           <input id="medStock" type="number" min="0" step="1" required value="30" />
