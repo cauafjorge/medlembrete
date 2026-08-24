@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#132a78" />
+  <meta name="description" content="MedLembrete — controle simples de medicamentos, horários, estoque e histórico." />
+  <link rel="manifest" href="/manifest.json" />
+  <link rel="icon" href="/icon.svg" type="image/svg+xml" />
+  <link rel="stylesheet" href="/styles.css" />
+  <title>MedLembrete</title>
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar" aria-label="Navegação principal">
+      <div class="brand" tabindex="0">
+        <div class="brand-mark" aria-hidden="true">✚</div>
+        <div>
+          <strong>MedLembrete</strong>
+          <span>Seu tratamento, organizado.</span>
+        </div>
+      </div>
+
+      <nav class="nav-list">
+        <button class="nav-item active" data-view="home"><span>⌂</span> Início</button>
+        <button class="nav-item" data-view="meds"><span>◉</span> Medicamentos</button>
+        <button class="nav-item" data-view="history"><span>↺</span> Histórico</button>
+        <button class="nav-item" data-view="profiles"><span>♙</span> Perfis</button>
+        <button class="nav-item" data-view="settings"><span>⚙</span> Ajustes</button>
+      </nav>
+
+      <div class="sidebar-footer">
+        <div class="profile-chip">
+          <div class="avatar" id="sidebarAvatar">M</div>
+          <div>
+            <strong id="sidebarProfile">Maria</strong>
+            <small>Perfil ativo</small>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <main class="main-content">
+      <header class="topbar">
+        <button class="mobile-menu" id="mobileMenu" aria-label="Abrir menu">☰</button>
+        <div>
+          <p class="eyebrow" id="dateLabel"></p>
+          <h1 id="pageTitle">Olá, Maria 👋</h1>
+        </div>
+        <div class="top-actions">
+          <button class="icon-btn" id="notifyBtn" title="Ativar notificações" aria-label="Ativar notificações">🔔</button>
+          <button class="primary-btn" id="quickAddBtn">＋ Medicamento</button>
+        </div>
+      </header>
+
+      <section id="view-home" class="view active"></section>
+      <section id="view-meds" class="view"></section>
+      <section id="view-history" class="view"></section>
+      <section id="view-profiles" class="view"></section>
+      <section id="view-settings" class="view"></section>
+    </main>
+  </div>
+
+  <div class="modal" id="medModal" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="medModalTitle">
+    <div class="modal-card">
+      <div class="modal-head">
+        <div>
+          <p class="eyebrow">Cadastro</p>
+          <h2 id="medModalTitle">Novo medicamento</h2>
+        </div>
+        <button class="close-btn" data-close="medModal" aria-label="Fechar">×</button>
+      </div>
+      <form id="medForm" class="form-grid">
+        <input type="hidden" id="medId" />
+        <label class="full">Nome do medicamento
+          <input id="medName" required maxlength="60" placeholder="Ex.: Losartana" autocomplete="off" />
+        </label>
+        <label>Dosagem
+          <input id="medDose" required maxlength="30" placeholder="Ex.: 50 mg" />
+        </label>
+        <label>Forma
+          <select id="medFormType">
+            <option>Comprimido</option>
+            <option>Cápsula</option>
+            <option>Gotas</option>
+            <option>Injeção</option>
+            <option>Xarope</option>
+            <option>Outro</option>
+          </select>
+        </label>
+        <label class="full">Horários (separe por vírgula)
+          <input id="medTimes" required placeholder="08:00, 20:00" inputmode="numeric" />
+          <small>Use o formato HH:MM. Você pode informar vários horários.</small>
+        </label>
+        <label>Estoque atual
+          <input id="medStock" type="number" min="0" step="1" required value="30" />
+        </label>
+        <label>Alerta de estoque
+          <input id="medThreshold" type="number" min="0" step="1" required value="5" />
+        </label>
+        <label class="full">Orientação / observação
+          <textarea id="medNotes" rows="3" maxlength="160" placeholder="Ex.: tomar após o café da manhã"></textarea>
+        </label>
+        <div class="modal-actions full">
+          <button type="button" class="secondary-btn" data-close="medModal">Cancelar</button>
+          <button type="submit" class="primary-btn">Salvar medicamento</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="modal" id="profileModal" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="profileModalTitle">
+    <div class="modal-card small">
+      <div class="modal-head">
+        <div>
+          <p class="eyebrow">Perfil</p>
+          <h2 id="profileModalTitle">Novo perfil</h2>
+        </div>
+        <button class="close-btn" data-close="profileModal" aria-label="Fechar">×</button>
+      </div>
+      <form id="profileForm" class="form-grid">
+        <label class="full">Nome
+          <input id="profileName" required maxlength="40" placeholder="Ex.: João" />
+        </label>
+        <label class="full">Relação
+          <select id="profileRelation">
+            <option>Eu</option>
+            <option>Familiar</option>
+            <option>Paciente</option>
+            <option>Outro</option>
+          </select>
+        </label>
+        <div class="modal-actions full">
+          <button type="button" class="secondary-btn" data-close="profileModal">Cancelar</button>
+          <button type="submit" class="primary-btn">Criar perfil</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="login-overlay" id="loginOverlay">
+    <div class="login-card">
+      <div class="login-logo">✚</div>
+      <h1>MedLembrete</h1>
+      <p id="authSubtitle">Entre com seu e-mail para manter medicamentos, doses, perfis e histórico sincronizados entre seus dispositivos.</p>
+
+      <form id="authForm" class="auth-form">
+        <label id="authNameLabel" class="auth-name-field">Nome
+          <input id="authName" maxlength="60" autocomplete="name" placeholder="Seu nome" />
+        </label>
+        <label>E-mail
+          <input id="authEmail" type="email" required autocomplete="email" inputmode="email" placeholder="voce@exemplo.com" />
+        </label>
+        <label>Senha
+          <input id="authPassword" type="password" required minlength="6" autocomplete="current-password" placeholder="Mínimo de 6 caracteres" />
+        </label>
+        <button class="primary-btn auth-submit" id="authSubmit" type="submit">Entrar</button>
+      </form>
+
+      <button class="link-btn" id="toggleAuthMode" type="button">Ainda não tenho conta</button>
+      <button class="link-btn subtle" id="forgotPassword" type="button">Esqueci minha senha</button>
+      <div class="sync-message" id="syncMessage" aria-live="polite"></div>
+      <small class="login-note" id="loginNote">Ao entrar, seus dados ficam disponíveis no Android, iPhone e computador.</small>
+    </div>
+  </div>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore-compat.js"></script>
+  <script src="/config.js"></script>
+  <script src="/app.js"></script>
+</body>
+</html>
