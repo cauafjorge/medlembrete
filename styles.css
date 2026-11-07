@@ -383,3 +383,5 @@ body.high-contrast.dark{--teal:#5eead4;--teal-ink:#5eead4}
 .auth-or{display:flex;align-items:center;gap:10px;color:#5d6788;font-size:.8rem;margin:2px 0 12px}
 .auth-or::before,.auth-or::after{content:"";flex:1;height:1px;background:#e3e7f3}
 #deleteGoogleNote[hidden],#deletePassLabel[hidden]{display:none}
+.push-box{padding:12px 16px 4px;border-top:1px solid var(--line);margin-top:10px}
+.push-box>strong{display:block;margin-bottom:2px}

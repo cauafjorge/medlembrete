@@ -1,4 +1,4 @@
-const STORAGE_KEY='medlembrete_v3',UI_KEY='medlembrete_ui',OWNER_KEY='medlembrete_owner',FLAG_KEY='medlembrete_logged',DIRTY_KEY='medlembrete_dirty',PREV_KEY='medlembrete_prev';
+const STORAGE_KEY='medlembrete_v3',UI_KEY='medlembrete_ui',OWNER_KEY='medlembrete_owner',FLAG_KEY='medlembrete_logged',DIRTY_KEY='medlembrete_dirty',PREV_KEY='medlembrete_prev',PUSH_KEY='medlembrete_push';
 const PROD_HOST='medlembrete-lemon.vercel.app';
 const PRIVACY_CONTACT=''; // opcional: e-mail de contato do responsável, mostrado na política de privacidade
 const lsGet=k=>{try{return localStorage.getItem(k)}catch{return null}},lsSet=(k,v)=>{try{localStorage.setItem(k,v);return true}catch{return false}},lsDel=k=>{try{localStorage.removeItem(k)}catch{}};
@@ -184,6 +184,7 @@ function renderSettings(){
       <article class="card group"><h2>Lembretes</h2>
         <p class="helper">Receba um aviso no horário de cada remédio. O aparelho vai pedir sua permissão.</p>
         <div class="backup-actions"><button class="btn ${notif?'btn-soft':'btn-primary'}" data-act="notify">${ic('bell')}${notif?'Lembretes ativados':'Ativar lembretes'}</button></div>
+        <div class="push-box"><strong>Lembretes com o app fechado</strong>${(()=>{const p=pushState();return `<p class="helper" style="padding:2px 0 8px">${p.on?'Ativado neste aparelho. Você recebe o aviso no horário, mesmo sem abrir o app.':p.msg||'Receba o aviso no horário de cada remédio, mesmo com o app fechado.'}</p>${p.ok?`<div class="backup-actions"><button class="btn ${p.on?'btn-soft':'btn-primary'} btn-sm" data-act="${p.on?'push-off':'push-on'}">${ic('bell')}${p.on?'Desativar':'Ativar no aparelho'}</button></div>`:''}`})()}</div>
       </article>
       <article class="card group"><div class="row" style="border:0"><div><strong>Pontos e conquistas</strong><small>Desligado. Você escolhe se quer ver pontuação.</small></div><label class="switch"><input id="gamificationToggle" type="checkbox" role="switch" ${ui.gamification?'checked':''} aria-label="Pontos e conquistas"><i></i></label></div></article>
       <article class="card group"><h2>${ic('cloud')}Cópia dos seus dados</h2>
@@ -222,6 +223,8 @@ document.addEventListener('click',e=>{
   if(d.go)switchView(d.go);
   if(d.act==='notify')requestNotifications();
   if(d.act==='privacy')openPrivacy();
+  if(d.act==='push-on')enablePush();
+  if(d.act==='push-off')disablePush();
   if(d.goMissed){historyFilter='missed';renderHistory();switchView('history')}
   if(d.late)recordDose(d.med,d.time,d.late,d.date);
   if(d.act==='add-med')openMedModal();
@@ -431,6 +434,7 @@ async function initFirebase(){
         setOverlay(false);renderAll();
         await restoreCloud();renderAll();
         await applyGooglePhoto();
+        syncPush();
       }else{lsDel(FLAG_KEY);setOverlay(true);renderAll()}
     });
   }catch(e){console.error(e);setMsg('Falha ao iniciar a conta.',true)}
@@ -459,7 +463,7 @@ async function googleSignIn(){
 }
 async function forgot(){if(!auth)return setMsg('Conta indisponível no momento.',true);const email=$('#authEmail').value.trim();if(!email)return setMsg('Digite seu e-mail primeiro.',true);try{await auth.sendPasswordResetEmail(email);setMsg('Enviamos um link para o seu e-mail.')}catch(err){setMsg(authErr(err),true)}}
 function clearLocalData(){
-  clearTimeout(syncTimer);[STORAGE_KEY,OWNER_KEY,FLAG_KEY,DIRTY_KEY,PREV_KEY].forEach(lsDel);
+  clearTimeout(syncTimer);[STORAGE_KEY,OWNER_KEY,FLAG_KEY,DIRTY_KEY,PREV_KEY,PUSH_KEY,PUSH_KEY+'_token'].forEach(lsDel);
   state=seed();historyFilter='all';medQuery='';currentView='home';switchView('home');
 }
 async function logoutUser(){
@@ -467,6 +471,7 @@ async function logoutUser(){
   try{
     const ok=await syncToCloud(false);
     if(!ok&&!await confirmAsk('Alterações não enviadas','Não foi possível enviar as últimas alterações para a sua conta. Se sair agora, elas podem ser perdidas. Deseja sair mesmo assim?','Sair mesmo assim'))return;
+    await disablePush(true);
     await auth.signOut();clearLocalData();renderAll();
   }catch{toast('Não foi possível sair.',true)}
 }
@@ -474,7 +479,7 @@ function scheduleSync(){if(!currentUser||!db||syncing)return;clearTimeout(syncTi
 async function syncToCloud(show=false){
   if(!currentUser||!db){if(show)toast(lsGet(FLAG_KEY)==='1'?'Sem conexão com a conta agora. Suas alterações ficam neste aparelho.':'Entre na conta para sincronizar.',true);return false}
   syncing=true;
-  try{await db.collection('users').doc(currentUser.uid).set({state,ui,updatedAt:firebase.firestore.FieldValue.serverTimestamp(),email:currentUser.email||''},{merge:true});lsDel(DIRTY_KEY);if(show)toast('Dados sincronizados.');return true}
+  try{await db.collection('users').doc(currentUser.uid).set({state,ui,updatedAt:firebase.firestore.FieldValue.serverTimestamp(),email:currentUser.email||''},{merge:true});lsDel(DIRTY_KEY);syncPush();if(show)toast('Dados sincronizados.');return true}
   catch(e){console.error(e);if(show)toast('Falha ao sincronizar. Confira a internet.',true);return false}
   finally{syncing=false}
 }
@@ -491,6 +496,51 @@ async function restoreCloud(){
       await syncToCloud(false);
     }
   }catch(e){console.error(e);syncing=false;toast(e?.code==='unavailable'||!navigator.onLine?'Sem conexão. Usando os dados salvos neste aparelho.':'Não foi possível restaurar os dados da nuvem.',true)}
+}
+
+/* lembretes com o app fechado (push) */
+const isIOS=()=>/iPhone|iPad|iPod/i.test(navigator.userAgent);
+const isStandalone=()=>window.matchMedia?.('(display-mode: standalone)').matches||navigator.standalone===true;
+async function pushSupported(){try{return !!(window.firebase?.messaging&&await firebase.messaging.isSupported()&&'serviceWorker'in navigator&&'Notification'in window)}catch{return false}}
+function pushState(){
+  if(!window.firebase?.messaging)return{ok:false,msg:'Lembretes com o app fechado precisam de internet na primeira ativação.'};
+  if(isIOS()&&!isStandalone())return{ok:false,msg:'No iPhone, toque em Compartilhar e “Adicionar à Tela de Início”, abra o app por lá e ative aqui.'};
+  if(!currentUser)return{ok:false,msg:'Entre na conta para ativar.'};
+  if(typeof Notification!=='undefined'&&Notification.permission==='denied')return{ok:false,msg:'As notificações estão bloqueadas neste aparelho. Libere nas configurações do navegador.'};
+  return{ok:true,on:lsGet(PUSH_KEY)==='1'&&typeof Notification!=='undefined'&&Notification.permission==='granted',msg:''};
+}
+function pushSchedule(){
+  const multi=state.profiles.length>1,names=Object.fromEntries(state.profiles.map(p=>[p.id,p.name])),t0=new Date(),y=new Date(t0);y.setDate(y.getDate()-1);
+  const minD=today(y),meds=state.medications.filter(m=>(m.times||[]).length).slice(0,200).map(m=>({id:m.id,name:m.name,dose:m.dose,times:m.times,createdAt:m.createdAt||today(),who:multi?names[m.profileId]||'':''}));
+  const utc=new Set();meds.forEach(m=>m.times.forEach(t=>{const d=new Date();d.setHours(+t.slice(0,2),+t.slice(3,5),0,0);utc.add(`${String(d.getUTCHours()).padStart(2,'0')}:${String(d.getUTCMinutes()).padStart(2,'0')}`)}));
+  return{meds,utcTimes:[...utc],tz:Intl.DateTimeFormat().resolvedOptions().timeZone||'America/Sao_Paulo',taken:state.logs.filter(l=>l.doseId.slice(0,10)>=minD).map(l=>l.doseId).slice(-300),updatedAt:firebase.firestore.FieldValue.serverTimestamp()};
+}
+async function syncPush(){
+  if(lsGet(PUSH_KEY)!=='1'||!currentUser||!db)return;
+  try{await db.collection('push').doc(currentUser.uid).set({enabled:true,...pushSchedule()},{merge:true})}catch(e){console.error(e)}
+}
+async function enablePush(){
+  const st=pushState();if(!st.ok)return toast(st.msg,true);
+  if(!await pushSupported())return toast('Este navegador não permite lembretes com o app fechado.',true);
+  try{
+    if(Notification.permission!=='granted'&&await Notification.requestPermission()!=='granted')return toast('Permissão não concedida.',true);
+    const reg=await Promise.race([navigator.serviceWorker.ready,new Promise((_,rej)=>setTimeout(()=>rej(new Error('sw')),8000))]);
+    const token=await firebase.messaging().getToken({serviceWorkerRegistration:reg});
+    if(!token)throw new Error('sem token');
+    await db.collection('push').doc(currentUser.uid).set({enabled:true,tokens:firebase.firestore.FieldValue.arrayUnion(token),...pushSchedule()},{merge:true});
+    lsSet(PUSH_KEY,'1');lsSet(PUSH_KEY+'_token',token);
+    toast('Lembretes com o app fechado ativados.');
+  }catch(e){console.error(e);toast('Não foi possível ativar agora. Tente de novo.',true)}
+  renderSettings();bindDynamic();renderHome();
+}
+async function disablePush(silent=false){
+  const token=lsGet(PUSH_KEY+'_token');
+  try{
+    if(currentUser&&db&&token)await db.collection('push').doc(currentUser.uid).set({tokens:firebase.firestore.FieldValue.arrayRemove(token)},{merge:true});
+    if(window.firebase?.messaging&&await pushSupported())await firebase.messaging().deleteToken().catch(()=>{});
+  }catch(e){console.error(e)}
+  lsDel(PUSH_KEY);lsDel(PUSH_KEY+'_token');
+  if(!silent){toast('Lembretes com o app fechado desativados.');renderSettings();bindDynamic()}
 }
 
 async function applyGooglePhoto(){
@@ -522,6 +572,7 @@ function startDeleteAccount(){
 async function performDelete(u){
   clearTimeout(syncTimer);syncing=true;
   try{
+    await db.collection('push').doc(u.uid).delete().catch(()=>{});
     await db.collection('users').doc(u.uid).delete();
     await u.delete();
     syncing=false;if($('#deleteModal').classList.contains('open'))closeModal('deleteModal');clearLocalData();renderAll();toast('Conta e dados excluídos.');

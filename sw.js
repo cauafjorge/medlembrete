@@ -1,6 +1,6 @@
-const CACHE='medlembrete-v11',SDK_CACHE='medlembrete-sdk-v1';
+const CACHE='medlembrete-v12',SDK_CACHE='medlembrete-sdk-v1';
 const ASSETS=['/','/index.html','/styles.css','/app.js','/config.js','/manifest.json','/icon.svg','/icon-192.png','/icon-512.png','/apple-touch-icon.png'];
-const SDK=['app','auth','firestore'].map(n=>`https://www.gstatic.com/firebasejs/10.13.2/firebase-${n}-compat.js`);
+const SDK=['app','auth','firestore','messaging'].map(n=>`https://www.gstatic.com/firebasejs/10.13.2/firebase-${n}-compat.js`);
 self.addEventListener('install',event=>{
   event.waitUntil((async()=>{
     const c=await caches.open(CACHE);await c.addAll(ASSETS);
@@ -21,3 +21,8 @@ self.addEventListener('fetch',event=>{
   event.respondWith(fetch(req).then(r=>{const copy=r.clone();caches.open(CACHE).then(c=>c.put(req,copy));return r;}).catch(()=>caches.match(req).then(r=>r||caches.match('/index.html'))));
 });
 self.addEventListener('notificationclick',event=>{event.notification.close();event.waitUntil(clients.matchAll({type:'window',includeUncontrolled:true}).then(list=>list[0]?.focus()||clients.openWindow('/')));});
+self.addEventListener('push',event=>{
+  let p={};try{p=event.data?.json()||{}}catch{}
+  const d=p.data||p.notification||p;
+  event.waitUntil(self.registration.showNotification(d.title||'MedLembrete',{body:d.body||'',tag:d.tag||undefined,icon:'/icon-192.png',badge:'/icon-192.png'}));
+});

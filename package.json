@@ -1,0 +1,9 @@
+{
+  "name": "medlembrete",
+  "private": true,
+  "version": "1.0.0",
+  "description": "MedLembrete - lembretes de remédios (site estático + função de envio de push)",
+  "dependencies": {
+    "firebase-admin": "^13.0.0"
+  }
+}

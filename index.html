@@ -209,7 +209,9 @@
         <h3>O que guardamos</h3>
         <p>E-mail e nome da sua conta; os perfis que você cria (nome, relação e foto opcional); os remédios, horários, estoque e observações; e o histórico de doses marcadas como tomadas ou puladas. Isso inclui informações de saúde, que a lei trata como dados sensíveis. Só guardamos o que você digita.</p>
         <h3>Para que usamos</h3>
-        <p>Apenas para o app funcionar: mostrar sua agenda, controlar estoque, enviar lembretes neste aparelho e sincronizar seus dados entre aparelhos. Não vendemos dados, não mostramos anúncios e não usamos ferramentas de análise de uso.</p>
+        <p>Apenas para o app funcionar: mostrar sua agenda, controlar estoque, enviar lembretes e sincronizar seus dados entre aparelhos. Não vendemos dados, não mostramos anúncios e não usamos ferramentas de análise de uso.</p>
+        <h3>Lembretes com o app fechado</h3>
+        <p>Se você ativar essa opção, guardamos na sua conta uma cópia dos nomes, doses e horários dos remédios e um identificador do seu aparelho. Um servidor usa isso para enviar o aviso na hora certa pelo Firebase Cloud Messaging, do Google. Você pode desativar nos Ajustes a qualquer momento, e a exclusão da conta apaga tudo isso.</p>
         <h3>Onde ficam</h3>
         <p>Neste aparelho (armazenamento do navegador) e na sua conta, nos serviços Firebase Authentication e Cloud Firestore, do Google, cujos servidores podem ficar fora do Brasil. As regras de acesso permitem que somente a sua conta leia e grave os seus dados. O site é hospedado na Vercel. Sua senha é tratada pelo Firebase e não fica visível para nós.</p>
         <h3>Perfis de outras pessoas</h3>
@@ -292,6 +294,7 @@
   <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-messaging-compat.js"></script>
   <script src="/config.js"></script>
   <script src="/app.js"></script>
 </body>
