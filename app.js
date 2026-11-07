@@ -430,6 +430,7 @@ async function initFirebase(){
         lsSet(OWNER_KEY,u.uid);
         setOverlay(false);renderAll();
         await restoreCloud();renderAll();
+        await applyGooglePhoto();
       }else{lsDel(FLAG_KEY);setOverlay(true);renderAll()}
     });
   }catch(e){console.error(e);setMsg('Falha ao iniciar a conta.',true)}
@@ -490,6 +491,19 @@ async function restoreCloud(){
       await syncToCloud(false);
     }
   }catch(e){console.error(e);syncing=false;toast(e?.code==='unavailable'||!navigator.onLine?'Sem conexão. Usando os dados salvos neste aparelho.':'Não foi possível restaurar os dados da nuvem.',true)}
+}
+
+async function applyGooglePhoto(){
+  const u=currentUser,url=u?.photoURL;
+  if(!url||!u.providerData?.some(p=>p.providerId==='google.com'))return;
+  const key='medlembrete_gphoto_'+u.uid;if(lsGet(key)==='1')return;
+  const p=state.profiles.find(x=>x.relation==='Eu')||state.profiles[0];
+  if(!p||p.avatar){lsSet(key,'1');return}
+  try{
+    const r=await fetch(url.replace(/=s\d+(-c)?$/,'=s256-c'),{mode:'cors'});if(!r.ok)throw new Error('foto');
+    const av=await imageToAvatar(await r.blob());if(!safeAvatar(av))throw new Error('foto');
+    p.avatar=av;lsSet(key,'1');save();renderAll();
+  }catch{/* sem foto: fica a inicial do nome; tentamos de novo no próximo login */}
 }
 
 /* privacidade e exclusão de conta */
