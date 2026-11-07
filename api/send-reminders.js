@@ -67,6 +67,7 @@ module.exports = async (req, res) => {
     const admin = require('firebase-admin');
     if (!admin.apps.length) admin.initializeApp({ credential: admin.credential.cert(JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT)) });
     const out = await run({ db: admin.firestore(), messaging: admin.messaging(), FieldValue: admin.firestore.FieldValue });
+    console.log(JSON.stringify({ run: new Date().toISOString(), ...out }));
     res.status(200).json({ ok: true, ...out });
   } catch (e) {
     console.error(e);
