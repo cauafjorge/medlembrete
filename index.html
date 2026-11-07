@@ -2,11 +2,16 @@
 <html lang="pt-BR">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <meta name="theme-color" content="#172b79" />
   <meta name="description" content="MedLembrete — controle simples de remédios, horários, estoque e histórico." />
   <link rel="manifest" href="/manifest.json" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-title" content="MedLembrete" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <link rel="icon" href="/icon.svg" type="image/svg+xml" />
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
   <link rel="stylesheet" href="/styles.css" />
   <title>MedLembrete</title>
 </head>
@@ -43,7 +48,7 @@
   </svg>
 
   <div class="app-shell" id="appShell">
-    <aside class="brand-side" aria-hidden="false">
+    <aside class="brand-side" aria-label="MedLembrete">
       <div class="brand">
         <div class="brand-mark" aria-hidden="true"><svg class="ic"><use href="#i-plus"/></svg></div>
         <div><strong>MedLembrete</strong><span>Seu tratamento, organizado.</span></div>
@@ -192,8 +197,53 @@
     </div>
   </div>
 
+  <!-- Privacidade -->
+  <div class="modal" id="privacyModal" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="privacyTitle">
+    <div class="sheet">
+      <div class="sheet-grip" aria-hidden="true"></div>
+      <div class="sheet-head">
+        <div><p class="eyebrow">Seus dados</p><h2 id="privacyTitle">Política de Privacidade</h2></div>
+        <button class="icon-btn" data-close="privacyModal" aria-label="Fechar"><svg class="ic"><use href="#i-close"/></svg></button>
+      </div>
+      <div class="legal" tabindex="0" role="region" aria-label="Texto da política de privacidade">
+        <h3>O que guardamos</h3>
+        <p>E-mail e nome da sua conta; os perfis que você cria (nome, relação e foto opcional); os remédios, horários, estoque e observações; e o histórico de doses marcadas como tomadas ou puladas. Isso inclui informações de saúde, que a lei trata como dados sensíveis. Só guardamos o que você digita.</p>
+        <h3>Para que usamos</h3>
+        <p>Apenas para o app funcionar: mostrar sua agenda, controlar estoque, enviar lembretes neste aparelho e sincronizar seus dados entre aparelhos. Não vendemos dados, não mostramos anúncios e não usamos ferramentas de análise de uso.</p>
+        <h3>Onde ficam</h3>
+        <p>Neste aparelho (armazenamento do navegador) e na sua conta, nos serviços Firebase Authentication e Cloud Firestore, do Google, cujos servidores podem ficar fora do Brasil. As regras de acesso permitem que somente a sua conta leia e grave os seus dados. O site é hospedado na Vercel. Sua senha é tratada pelo Firebase e não fica visível para nós.</p>
+        <h3>Perfis de outras pessoas</h3>
+        <p>Ao cadastrar um familiar, você declara ter autorização dele ou ser o responsável por ele.</p>
+        <h3>Seus direitos</h3>
+        <p>Você pode ver e corrigir seus dados no próprio app, guardar uma cópia em arquivo (Ajustes, “Guardar cópia”) e apagar tudo em Ajustes, “Excluir minha conta e dados”. A exclusão remove sua conta e seus dados da nuvem e deste aparelho e não pode ser desfeita. Os dados ficam guardados até você excluí-los. Você pode retirar seu consentimento a qualquer momento excluindo a conta.</p>
+        <h3>Aviso</h3>
+        <p>O MedLembrete ajuda na organização, mas não substitui a orientação médica ou farmacêutica.</p>
+        <div id="privacyContact"></div>
+      </div>
+      <div class="sheet-actions"><button type="button" class="btn btn-primary" data-close="privacyModal">Entendi</button></div>
+    </div>
+  </div>
+
+  <!-- Excluir conta -->
+  <div class="modal center" id="deleteModal" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="deleteTitle">
+    <div class="dialog">
+      <h2 id="deleteTitle">Excluir conta e dados</h2>
+      <p>Isso apaga para sempre sua conta, seus remédios, doses e histórico, na nuvem e neste aparelho. Não dá para desfazer. Se quiser, guarde uma cópia antes.</p>
+      <form id="deleteForm" class="form-grid">
+        <label class="full">Digite sua senha para confirmar
+          <input id="deletePassword" type="password" autocomplete="current-password" />
+        </label>
+        <p id="deleteError" class="form-error full" role="alert"></p>
+        <div class="sheet-actions full">
+          <button type="button" class="btn btn-ghost" data-close="deleteModal">Cancelar</button>
+          <button type="submit" class="btn btn-danger-solid" id="deleteConfirmBtn">Excluir tudo</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <!-- Login -->
-  <div class="login-overlay" id="loginOverlay">
+  <div class="login-overlay" id="loginOverlay" role="dialog" aria-modal="true" aria-label="Entrar no MedLembrete">
     <div class="login-inner">
       <div class="login-brand">
         <div class="login-logo"><svg class="ic"><use href="#i-plus"/></svg></div>
@@ -218,6 +268,10 @@
           <label id="authConfirmLabel" class="auth-name-field">Confirmar senha
             <input id="authPasswordConfirm" type="password" minlength="6" autocomplete="new-password" placeholder="Digite a senha de novo" />
           </label>
+          <label id="authConsentLabel" class="auth-consent auth-name-field">
+            <input id="authConsent" type="checkbox" />
+            <span>Li e aceito a <button type="button" class="link-btn inline" id="openPrivacy">Política de Privacidade</button>, inclusive o tratamento dos dados de saúde que eu cadastrar.</span>
+          </label>
           <button class="btn btn-primary btn-block" id="authSubmit" type="submit">Entrar</button>
         </form>
         <div class="login-links">
@@ -229,7 +283,7 @@
     </div>
   </div>
 
-  <div class="toast" id="toast" role="status" aria-live="polite"><span id="toastText"></span><button id="toastUndo" class="toast-undo" hidden><svg class="ic"><use href="#i-undo"/></svg>Desfazer</button></div>
+  <div class="toast" id="toast" role="status" aria-live="polite"><span id="toastText"></span><button id="toastUndo" class="toast-undo" hidden><svg class="ic" aria-hidden="true"><use href="#i-undo"/></svg><span id="toastUndoLabel">Desfazer</span></button></div>
 
   <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-auth-compat.js"></script>

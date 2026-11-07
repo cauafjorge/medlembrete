@@ -44,7 +44,7 @@ h1,h2,h3,p{margin:0}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 
 .page-head{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;margin-bottom:16px}
-.eyebrow{font-size:.7rem;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:var(--teal)}
+.eyebrow{font-size:.7rem;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:var(--teal-ink)}
 .page-head h1,.page-head h2{font-size:1.75rem;line-height:1.15;font-weight:800;letter-spacing:-.02em;margin-top:2px}
 
 /* ---------- botões (3 estilos fixos: primário, secundário, destrutivo) ---------- */
@@ -349,3 +349,29 @@ input,select,textarea{font-size:max(16px,1rem)}
   .dose-actions .btn,.dose-actions .pill{flex:1;justify-content:center}
 }
 html,body{overflow-x:hidden}
+
+/* ---- correções de segurança e acessibilidade ---- */
+body::before{content:"";position:fixed;top:0;left:0;right:0;height:env(safe-area-inset-top);background:#172b79;z-index:90;pointer-events:none}
+body.dark::before{background:#0b1020}
+.login-overlay{padding-top:calc(20px + env(safe-area-inset-top))}
+.toast-undo{min-height:44px;padding:4px 10px}
+.toast span{overflow-wrap:anywhere}
+@media (max-width:600px){
+  .toast{left:16px;right:16px;max-width:none;transform:translateY(20px);justify-content:space-between}
+  .toast.show{transform:translateY(0)}
+}
+.auth-consent{font-size:.88rem;line-height:1.4;color:#141b3a}
+.auth-consent.show{display:flex;gap:10px;align-items:flex-start}
+.auth-consent input{width:24px;height:24px;min-height:0;flex:none;margin:0;accent-color:#172b79}
+.auth-consent .link-btn.inline{padding:0;display:inline;text-decoration:underline;font-size:inherit}
+.legal{display:grid;gap:8px;margin:4px 0 14px;max-height:52vh;overflow:auto;padding-right:4px}
+.legal h3{font-size:.95rem;font-weight:800;margin-top:6px}
+.legal p{color:var(--muted);font-size:.9rem}
+.legal a{color:var(--teal-ink);font-weight:700}
+.late-actions{grid-column:1/-1;display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+.pill-warn{background:var(--warn-soft);color:var(--warn)}
+.miss-card{margin-top:14px}
+#deleteForm .sheet-actions{margin-top:0}
+body.high-contrast.dark{--teal:#5eead4;--teal-ink:#5eead4}
+.legal:focus-visible{outline:3px solid var(--navy-2);outline-offset:2px;border-radius:8px}
+.filters{flex-wrap:wrap;overflow:visible}
