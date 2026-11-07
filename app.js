@@ -324,7 +324,7 @@ const firebaseConfigured=()=>{const c=window.MEDLEMBRETE_FIREBASE_CONFIG||{};ret
 function setMsg(x,err=false){const e=$('#syncMessage');e.textContent=x||'';e.classList.toggle('error',err)}
 function setAuthMode(m){
   authMode=m;const s=m==='signup';
-  $('#authNameLabel').classList.toggle('show',s);$('#authName').required=s;
+  $('#authNameLabel').classList.toggle('show',s);$('#authName').required=s;$('#authConfirmLabel').classList.toggle('show',s);$('#authPasswordConfirm').required=s;$('#authPasswordConfirm').value='';
   $('#authSubmit').textContent=s?'Criar conta':'Entrar';
   $('#toggleAuthMode').textContent=s?'Já tenho conta':'Criar conta';
   $('#forgotPassword').classList.toggle('hidden',s);
@@ -344,6 +344,7 @@ async function initFirebase(){
 async function handleAuth(e){
   e.preventDefault();if(!auth)return setMsg('Conta indisponível no momento.',true);
   const email=$('#authEmail').value.trim(),pass=$('#authPassword').value,name=$('#authName').value.trim();
+  if(authMode==='signup'&&pass!==$('#authPasswordConfirm').value){setMsg('As senhas não são iguais. Confira e digite de novo.',true);$('#authPasswordConfirm').focus();return}
   try{
     setMsg(authMode==='signup'?'Criando conta…':'Entrando…');
     if(authMode==='signup'){const c=await auth.createUserWithEmailAndPassword(email,pass);if(name)await c.user.updateProfile({displayName:name});const p=uid();state={activeProfileId:p,profiles:[{id:p,name:name||email.split('@')[0],relation:'Eu',avatar:''}],medications:[],logs:[],version:3};save();renderAll();await syncToCloud(true)}
@@ -381,7 +382,9 @@ $('#removeAvatarBtn').onclick=()=>{pendingAvatar='';updateAvatarPreview($('#prof
 $('#authForm').onsubmit=handleAuth;
 $('#toggleAuthMode').onclick=()=>setAuthMode(authMode==='login'?'signup':'login');
 $('#forgotPassword').onclick=forgot;
-$('#togglePass').onclick=()=>{const i=$('#authPassword'),show=i.type==='password';i.type=show?'text':'password';$('#togglePass').innerHTML=ic(show?'eye-off':'eye');$('#togglePass').setAttribute('aria-label',show?'Ocultar senha':'Mostrar senha')};
+$('#authPasswordConfirm').oninput=()=>{const a=$('#authPassword').value,b=$('#authPasswordConfirm').value;setMsg(b&&a!==b?'As senhas não são iguais.':'',!!(b&&a!==b))};
+$('#authPassword').addEventListener('input',()=>{if(authMode==='signup'&&$('#authPasswordConfirm').value)$('#authPasswordConfirm').oninput()});
+$('#togglePass').onclick=()=>{const i=$('#authPassword'),show=i.type==='password';i.type=show?'text':'password';$('#authPasswordConfirm').type=i.type;$('#togglePass').innerHTML=ic(show?'eye-off':'eye');$('#togglePass').setAttribute('aria-label',show?'Ocultar senha':'Mostrar senha')};
 setAuthMode('login');
 renderAll();
 initFirebase();
