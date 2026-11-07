@@ -375,3 +375,11 @@ body.dark::before{background:#0b1020}
 body.high-contrast.dark{--teal:#5eead4;--teal-ink:#5eead4}
 .legal:focus-visible{outline:3px solid var(--navy-2);outline-offset:2px;border-radius:8px}
 .filters{flex-wrap:wrap;overflow:visible}
+
+.btn-google{background:#fff;color:#141b3a;border:1.5px solid #cfd6ea;display:inline-flex;align-items:center;justify-content:center;gap:10px;margin-bottom:10px}
+.btn-google .g-logo{width:20px;height:20px;flex:none}
+.auth-note{font-size:.8rem;color:#5d6788;text-align:center;margin:0 0 12px}
+.auth-note .link-btn.inline{padding:0;display:inline;text-decoration:underline;font-size:inherit;color:#172b79}
+.auth-or{display:flex;align-items:center;gap:10px;color:#5d6788;font-size:.8rem;margin:2px 0 12px}
+.auth-or::before,.auth-or::after{content:"";flex:1;height:1px;background:#e3e7f3}
+#deleteGoogleNote[hidden],#deletePassLabel[hidden]{display:none}

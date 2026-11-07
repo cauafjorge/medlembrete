@@ -1,4 +1,5 @@
 const STORAGE_KEY='medlembrete_v3',UI_KEY='medlembrete_ui',OWNER_KEY='medlembrete_owner',FLAG_KEY='medlembrete_logged',DIRTY_KEY='medlembrete_dirty',PREV_KEY='medlembrete_prev';
+const PROD_HOST='medlembrete-lemon.vercel.app';
 const PRIVACY_CONTACT=''; // opcional: e-mail de contato do responsável, mostrado na política de privacidade
 const lsGet=k=>{try{return localStorage.getItem(k)}catch{return null}},lsSet=(k,v)=>{try{localStorage.setItem(k,v);return true}catch{return false}},lsDel=k=>{try{localStorage.removeItem(k)}catch{}};
 const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
@@ -408,7 +409,7 @@ function setAuthMode(m){
   $('#authSubtitle').textContent=s?'Crie sua conta para guardar seus dados com segurança.':'Entre para manter remédios, doses e histórico sincronizados.';
   setMsg('');
 }
-function authErr(e){const c=e?.code||'';if(c.includes('email-already'))return'Este e-mail já tem conta.';if(c.includes('weak-password'))return'A senha precisa ter ao menos 6 caracteres.';if(c.includes('invalid-email'))return'E-mail inválido.';if(c.includes('too-many-requests'))return'Muitas tentativas. Aguarde um pouco.';if(c.includes('invalid-credential')||c.includes('wrong-password')||c.includes('user-not-found'))return'E-mail ou senha incorretos.';if(c.includes('network'))return'Sem internet no momento.';return'Não foi possível concluir. Tente de novo.'}
+function authErr(e){const c=e?.code||'';if(c.includes('email-already'))return'Este e-mail já tem conta.';if(c.includes('weak-password'))return'A senha precisa ter ao menos 6 caracteres.';if(c.includes('invalid-email'))return'E-mail inválido.';if(c.includes('too-many-requests'))return'Muitas tentativas. Aguarde um pouco.';if(c.includes('invalid-credential')||c.includes('wrong-password')||c.includes('user-not-found'))return'E-mail ou senha incorretos.';if(c.includes('network'))return'Sem internet no momento.';if(c.includes('account-exists'))return'Este e-mail já tem conta com senha. Entre com e-mail e senha.';if(c.includes('popup-closed')||c.includes('cancelled-popup'))return'';if(c.includes('popup-blocked'))return'O navegador bloqueou a janela do Google. Libere pop-ups e tente de novo.';if(c.includes('unauthorized-domain'))return'Este endereço ainda não foi liberado para o login com Google.';return'Não foi possível concluir. Tente de novo.'}
 async function initFirebase(){
   if(!firebaseConfigured()||!window.firebase){
     if(lsGet(FLAG_KEY)==='1'){setOverlay(false);renderAll();toast('Sem conexão com a conta. Usando os dados salvos neste aparelho.')}
@@ -416,8 +417,10 @@ async function initFirebase(){
     return;
   }
   try{
-    firebase.initializeApp(window.MEDLEMBRETE_FIREBASE_CONFIG);auth=firebase.auth();db=firebase.firestore();
+    const cfg={...window.MEDLEMBRETE_FIREBASE_CONFIG};if(location.hostname===PROD_HOST)cfg.authDomain=PROD_HOST; // login Google pelo mesmo domínio (funciona no iPhone)
+    firebase.initializeApp(cfg);auth=firebase.auth();db=firebase.firestore();
     await auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
+    auth.getRedirectResult().then(async r=>{if(r?.user&&sessionStorage.getItem('medlembrete_del')==='1'){sessionStorage.removeItem('medlembrete_del');await performDelete(r.user)}}).catch(err=>{sessionStorage.removeItem('medlembrete_del');const m=authErr(err);if(m)setMsg(m,true)});
     auth.onAuthStateChanged(async u=>{
       currentUser=u||null;
       if(u){
@@ -441,6 +444,17 @@ async function handleAuth(e){
     if(authMode==='signup'){const c=await auth.createUserWithEmailAndPassword(email,pass);if(name)await c.user.updateProfile({displayName:name});const p=uid();state={activeProfileId:p,profiles:[{id:p,name:name||email.split('@')[0],relation:'Eu',avatar:''}],medications:[],logs:[],version:3};save();renderAll();await syncToCloud(true)}
     else await auth.signInWithEmailAndPassword(email,pass);
   }catch(err){setMsg(authErr(err),true)}
+}
+const isInstalledOrMobile=()=>window.matchMedia?.('(display-mode: standalone)').matches||navigator.standalone===true||/iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+async function googleSignIn(){
+  if(!auth)return setMsg('Conta indisponível no momento.',true);
+  const provider=new firebase.auth.GoogleAuthProvider();provider.setCustomParameters({prompt:'select_account'});
+  try{
+    setMsg('Abrindo o Google…');
+    if(isInstalledOrMobile())await auth.signInWithRedirect(provider);
+    else await auth.signInWithPopup(provider);
+    setMsg('');
+  }catch(err){setMsg(authErr(err),!!authErr(err))}
 }
 async function forgot(){if(!auth)return setMsg('Conta indisponível no momento.',true);const email=$('#authEmail').value.trim();if(!email)return setMsg('Digite seu e-mail primeiro.',true);try{await auth.sendPasswordResetEmail(email);setMsg('Enviamos um link para o seu e-mail.')}catch(err){setMsg(authErr(err),true)}}
 function clearLocalData(){
@@ -471,7 +485,10 @@ async function restoreCloud(){
       const cs=sanitizeState(snap.data().state);
       if(!cs){toast('Os dados da nuvem estão em um formato inválido. Nada foi alterado.',true);return}
       syncing=true;state=cs;ui={...ui,...sanitizeUI(snap.data().ui)};lsSet(STORAGE_KEY,JSON.stringify(state));lsSet(UI_KEY,JSON.stringify(ui));lsDel(DIRTY_KEY);applyUI();syncing=false;
-    }else await syncToCloud(false);
+    }else{
+      if(state.profiles.length===1&&state.profiles[0].name==='Usuário'&&!state.medications.length&&!state.logs.length){const n=cut(currentUser.displayName||(currentUser.email||'').split('@')[0],40).trim();if(n){state.profiles[0].name=n;lsSet(STORAGE_KEY,JSON.stringify(state))}}
+      await syncToCloud(false);
+    }
   }catch(e){console.error(e);syncing=false;toast(e?.code==='unavailable'||!navigator.onLine?'Sem conexão. Usando os dados salvos neste aparelho.':'Não foi possível restaurar os dados da nuvem.',true)}
 }
 
@@ -480,25 +497,43 @@ function openPrivacy(){
   $('#privacyContact').innerHTML=PRIVACY_CONTACT?`<p>Contato do responsável: <a href="mailto:${esc(PRIVACY_CONTACT)}">${esc(PRIVACY_CONTACT)}</a></p>`:'';
   openModal('privacyModal');
 }
+const hasPassword=u=>!!u?.providerData?.some(p=>p.providerId==='password');
 function startDeleteAccount(){
   if(!currentUser)return;
+  const pw=hasPassword(currentUser);
+  $('#deletePassLabel').hidden=!pw;$('#deleteGoogleNote').hidden=pw;
+  $('#deleteConfirmBtn').textContent=pw?'Excluir tudo':'Confirmar com o Google e excluir';
   $('#deleteError').textContent='';$('#deletePassword').value='';openModal('deleteModal');
+}
+async function performDelete(u){
+  clearTimeout(syncTimer);syncing=true;
+  try{
+    await db.collection('users').doc(u.uid).delete();
+    await u.delete();
+    syncing=false;if($('#deleteModal').classList.contains('open'))closeModal('deleteModal');clearLocalData();renderAll();toast('Conta e dados excluídos.');
+  }catch(x){
+    syncing=false;console.error(x);toast('Não foi possível excluir a conta agora. Tente de novo.',true);
+  }
 }
 async function confirmDeleteAccount(e){
   e.preventDefault();const err=$('#deleteError'),pw=$('#deletePassword').value;err.textContent='';
   if(!currentUser||!auth||!db)return;
-  if(!pw){err.textContent='Digite sua senha para confirmar.';return}
+  const u=currentUser,usesPass=hasPassword(u);
+  if(usesPass&&!pw){err.textContent='Digite sua senha para confirmar.';return}
   const btn=$('#deleteConfirmBtn');btn.disabled=true;
   try{
-    const u=currentUser,cred=firebase.auth.EmailAuthProvider.credential(u.email,pw);
-    await u.reauthenticateWithCredential(cred);
-    clearTimeout(syncTimer);syncing=true;
-    await db.collection('users').doc(u.uid).delete();
-    await u.delete();
-    syncing=false;closeModal('deleteModal');clearLocalData();renderAll();toast('Conta e dados excluídos.');
+    if(usesPass){
+      await u.reauthenticateWithCredential(firebase.auth.EmailAuthProvider.credential(u.email,pw));
+      await performDelete(u);
+    }else{
+      const provider=new firebase.auth.GoogleAuthProvider();
+      if(isInstalledOrMobile()){sessionStorage.setItem('medlembrete_del','1');await u.reauthenticateWithRedirect(provider);return}
+      await u.reauthenticateWithPopup(provider);
+      await performDelete(u);
+    }
   }catch(x){
     syncing=false;const c=x?.code||'';
-    err.textContent=c.includes('wrong-password')||c.includes('invalid-credential')?'Senha incorreta.':c.includes('too-many')?'Muitas tentativas. Aguarde um pouco.':c.includes('network')?'Sem internet no momento.':'Não foi possível excluir agora. Tente de novo.';
+    err.textContent=c.includes('wrong-password')||c.includes('invalid-credential')?'Senha incorreta.':c.includes('too-many')?'Muitas tentativas. Aguarde um pouco.':c.includes('network')?'Sem internet no momento.':c.includes('popup-closed')||c.includes('cancelled-popup')?'Confirmação cancelada.':'Não foi possível excluir agora. Tente de novo.';
   }finally{btn.disabled=false}
 }
 
@@ -511,6 +546,7 @@ $('#profileName').oninput=e=>{if(!pendingAvatar)updateAvatarPreview(e.target.val
 $('#removeAvatarBtn').onclick=()=>{pendingAvatar='';updateAvatarPreview($('#profileName').value)};
 $('#authForm').onsubmit=handleAuth;
 $('#deleteForm').onsubmit=confirmDeleteAccount;
+$('#googleBtn').onclick=googleSignIn;
 $('#openPrivacy').onclick=openPrivacy;
 $('#toggleAuthMode').onclick=()=>setAuthMode(authMode==='login'?'signup':'login');
 $('#forgotPassword').onclick=forgot;

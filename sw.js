@@ -1,4 +1,4 @@
-const CACHE='medlembrete-v10',SDK_CACHE='medlembrete-sdk-v1';
+const CACHE='medlembrete-v11',SDK_CACHE='medlembrete-sdk-v1';
 const ASSETS=['/','/index.html','/styles.css','/app.js','/config.js','/manifest.json','/icon.svg','/icon-192.png','/icon-512.png','/apple-touch-icon.png'];
 const SDK=['app','auth','firestore'].map(n=>`https://www.gstatic.com/firebasejs/10.13.2/firebase-${n}-compat.js`);
 self.addEventListener('install',event=>{
@@ -12,6 +12,7 @@ self.addEventListener('install',event=>{
 self.addEventListener('activate',event=>{event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE&&k!==SDK_CACHE).map(k=>caches.delete(k)))));self.clients.claim();});
 self.addEventListener('fetch',event=>{
   const req=event.request;if(req.method!=='GET')return;
+  if(new URL(req.url).pathname.startsWith('/__/'))return;
   if(req.url.startsWith('https://www.gstatic.com/firebasejs/')){
     event.respondWith(caches.open(SDK_CACHE).then(async c=>(await c.match(req.url))||fetch(req).then(r=>{c.put(req.url,r.clone());return r})));
     return;
